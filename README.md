@@ -17,3 +17,7 @@ the current station. Once the requested distance is 0, it returns only the curre
 "already visited" stations are passed along with each call.
 
 Everything else is just models for the data and user input handling (the latter was perhaps not entirely necessary..)
+
+
+### Running it
+I've created a release on here with a zip file that contains the windows exe and the .csv file (which needs to be in the same directory to run).
