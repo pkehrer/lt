@@ -5,9 +5,13 @@ using LondonTube.Models;
 
 namespace LondonTube
 {
+    /// <summary>
+    /// Reads data from the .csv file and creates a dictionary of station objects keyed on name which contain
+    /// all of the connections to other stations.
+    /// </summary>
     internal class StationMapBuilder
     {
-        internal static IDictionary<string, Station> BuildStationMap(string dataFilePath)
+        internal static IDictionary<string, Station> BuildStationMap(string dataFilePath, ICollection<string> limitLines = null)
         {
             var lines = File.ReadAllLines(dataFilePath);
             var tubeLines = new List<TubeLineData>();
@@ -22,34 +26,50 @@ namespace LondonTube
 
             foreach (var tubeLineRow in tubeLines)
             {
-                AddConnection(stations, tubeLineRow);
+                AddConnections(stations, tubeLineRow, limitLines);
             }
 
             return stations;
         }
 
-
-        private static void AddConnection(IDictionary<string, Station> stations, TubeLineData tubeLineRow)
+        /// <summary>
+        /// Given a row of data from the .csv file, add the station (if not already added) and add
+        /// the specified connection in both directions.
+        /// </summary>
+        private static void AddConnections(IDictionary<string, Station> stations, TubeLineData tubeLineRow,ICollection<string> limitLines)
         {
-            //if (!new[] { "District", "Hammersmith and City", "Jubilee" }.Contains(tubeLineRow.Line))
-            //{
-            //    return;
-            //}
-
-            Station station;
-            if (!stations.TryGetValue(tubeLineRow.FromStation, out station))
+            // If we've chosen to restrict the lines to search, ignore this row if it is not in the list
+            // of included lines to search.
+            if (limitLines != null &&
+                limitLines.Any() &&
+                !limitLines.Contains(tubeLineRow.Line))
             {
-                stations[tubeLineRow.FromStation] = new Station(tubeLineRow.FromStation);
-                station = stations[tubeLineRow.FromStation];
+                return;
             }
-            station.Connections.Add(new Connection(tubeLineRow.Line, tubeLineRow.ToStation));
 
-            if (!stations.TryGetValue(tubeLineRow.ToStation, out station))
+            // Add the connection in both directions.
+            AddConnection(stations, tubeLineRow.FromStation, tubeLineRow.Line, tubeLineRow.ToStation);
+            AddConnection(stations, tubeLineRow.ToStation, tubeLineRow.Line, tubeLineRow.FromStation);
+        }
+
+        // Handle create/update of dictionary entries
+        private static void AddConnection(IDictionary<string, Station> stations, string fromStationName, string line, string toStationName)
+        {
+            Station fromStation;
+            if (!stations.TryGetValue(fromStationName, out fromStation))
             {
-                stations[tubeLineRow.ToStation] = new Station(tubeLineRow.ToStation);
-                station = stations[tubeLineRow.ToStation];
+                stations[fromStationName] = new Station(fromStationName);
+                fromStation = stations[fromStationName];
             }
-            station.Connections.Add(new Connection(tubeLineRow.Line, tubeLineRow.FromStation));
+
+            Station toStation;
+            if (!stations.TryGetValue(toStationName, out toStation))
+            {
+                stations[toStationName] = new Station(toStationName);
+                toStation = stations[toStationName];
+            }
+
+            fromStation.Connections.Add(new Connection(line, toStation));
         }
     }
 }
